@@ -13,7 +13,7 @@ func main() {
 	// Setup and start the API server
 	router := api.SetupRouter()
 	
-	log.Printf("Starting MCP Hub server on port %s", cfg.Port)
+	log.Printf("Starting MCPHub server on port %s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

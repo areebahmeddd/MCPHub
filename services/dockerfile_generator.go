@@ -71,16 +71,13 @@ func (dg *DockerfileGenerator) getBaseImage(command string) string {
 func (dg *DockerfileGenerator) addInstallCommands(dockerfile *strings.Builder, command string) {
 	switch command {
 	case "node":
-		dockerfile.WriteString("# Install dependencies\n")
 		dockerfile.WriteString("RUN if [ -f package.json ]; then npm install --only=production; fi\n")
 		dockerfile.WriteString("RUN if [ -f yarn.lock ]; then yarn install --production; fi\n\n")
 	case "python", "python3":
-		dockerfile.WriteString("# Install dependencies\n")
 		dockerfile.WriteString("RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi\n")
 		dockerfile.WriteString("RUN if [ -f pyproject.toml ]; then pip install uv && uv pip install --system .; fi\n")
 		dockerfile.WriteString("RUN if [ -f Pipfile ]; then pip install pipenv && pipenv install --system --deploy; fi\n\n")
 	case "go":
-		dockerfile.WriteString("# Install dependencies\n")
 		dockerfile.WriteString("RUN if [ -f go.mod ]; then go mod download; fi\n")
 		dockerfile.WriteString("RUN if [ -f go.mod ]; then go build -o main .; fi\n\n")
 	default:

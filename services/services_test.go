@@ -11,24 +11,6 @@ import (
 func TestDockerfileGenerator_Generate(t *testing.T) {
 	generator := NewDockerfileGenerator()
 
-	// Test Node.js application
-	nodeConfig := models.MCPConfig{
-		Name:        "node-app",
-		Version:     "1.0.0",
-		Description: "Node.js application",
-		Run: models.RunConfig{
-			Command: "node",
-			Args:    []string{"server.js"},
-			Port:    8080,
-		},
-	}
-
-	dockerfile := generator.Generate(&nodeConfig)
-	assert.Contains(t, dockerfile, "FROM node:18-alpine")
-	assert.Contains(t, dockerfile, "EXPOSE 8080")
-	assert.Contains(t, dockerfile, "CMD [\"node\", \"server.js\"]")
-	assert.Contains(t, dockerfile, "npm install")
-
 	// Test Python application
 	pythonConfig := models.MCPConfig{
 		Name:        "python-app",
@@ -41,16 +23,27 @@ func TestDockerfileGenerator_Generate(t *testing.T) {
 		},
 	}
 
-	dockerfile2 := generator.Generate(&pythonConfig)
-	assert.Contains(t, dockerfile2, "FROM python:3.11-slim")
-	assert.Contains(t, dockerfile2, "EXPOSE 5000")
-	assert.Contains(t, dockerfile2, "CMD [\"python3\", \"app.py\"]")
-	assert.Contains(t, dockerfile2, "requirements.txt")
-}
+	dockerfile1 := generator.Generate(&pythonConfig)
+	assert.Contains(t, dockerfile1, "FROM python:3.11-slim")
+	assert.Contains(t, dockerfile1, "EXPOSE 5000")
+	assert.Contains(t, dockerfile1, "CMD [\"python3\", \"app.py\"]")
+	assert.Contains(t, dockerfile1, "requirements.txt")
 
-func TestZipProcessor_ProcessZip(t *testing.T) {
-	// Note: This test would require Docker to be installed and running
-	// For CI/CD environments, you might want to mock the Docker commands
-	// or skip the test if Docker is not available
-	t.Skip("Skipping Docker integration test - requires Docker daemon")
+	// Test Node.js application
+	nodeConfig := models.MCPConfig{
+		Name:        "node-app",
+		Version:     "1.0.0",
+		Description: "Node.js application",
+		Run: models.RunConfig{
+			Command: "node",
+			Args:    []string{"server.js"},
+			Port:    8080,
+		},
+	}
+
+	dockerfile2 := generator.Generate(&nodeConfig)
+	assert.Contains(t, dockerfile2, "FROM node:18-alpine")
+	assert.Contains(t, dockerfile2, "EXPOSE 8080")
+	assert.Contains(t, dockerfile2, "CMD [\"node\", \"server.js\"]")
+	assert.Contains(t, dockerfile2, "npm install")
 }
