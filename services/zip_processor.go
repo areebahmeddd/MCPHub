@@ -24,59 +24,60 @@ func NewZipProcessor() *ZipProcessor {
 	}
 }
 
+// ProcessZip accepts zip data and filename, extracts contents, generates Dockerfile, builds and saves the image.
 func (zp *ZipProcessor) ProcessZip(zipData []byte, zipFileName string) (*models.DockerfileResponse, error) {
-	// Load zip archive in-memory
+	// Load zip archive from byte slice
 	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read zip file: %v", err)
+		return nil, fmt.Errorf("failed to read zip file: %w", err)
 	}
 
-	// Prepare clean extraction directory
+	// Prepare extraction directory, cleaning if it exists
 	extractDir := filepath.Join("extracted", strings.TrimSuffix(zipFileName, ".zip"))
 	if err := os.RemoveAll(extractDir); err != nil {
-		return nil, fmt.Errorf("failed to clean extract directory: %v", err)
+		return nil, fmt.Errorf("failed to clean extraction directory: %w", err)
 	}
 	if err := os.MkdirAll(extractDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create extract directory: %v", err)
+		return nil, fmt.Errorf("failed to create extraction directory: %w", err)
 	}
 
-	// Unzip contents
+	// Extract all files from zip to extraction directory
 	if err := zp.extractZip(reader, extractDir); err != nil {
-		return nil, fmt.Errorf("failed to extract zip: %v", err)
+		return nil, fmt.Errorf("failed to extract zip contents: %w", err)
 	}
 
-	// Locate and load mcp.json
+	// Locate and parse mcp.json file (configuration)
 	mcpConfig, mcpDir, err := zp.findAndParseMCPConfigFromDir(extractDir)
 	if err != nil {
 		return nil, err
 	}
 
-	// Generate Dockerfile from config
+	// Generate Dockerfile text from config
 	dockerfileContent := zp.dockerfileGenerator.Generate(mcpConfig)
 
-	// Save Dockerfile alongside mcp.json
+	// Write Dockerfile next to mcp.json
 	dockerfilePath := filepath.Join(mcpDir, "Dockerfile")
 	if err := os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644); err != nil {
-		return nil, fmt.Errorf("failed to write Dockerfile: %v", err)
+		return nil, fmt.Errorf("failed to write Dockerfile: %w", err)
 	}
 
-	// Build image using Dockerfile
+	// Build Docker image
 	imageName := strings.ToLower(mcpConfig.Name)
 	if err := zp.buildDockerImage(mcpDir, imageName); err != nil {
-		return nil, fmt.Errorf("failed to build Docker image: %v", err)
+		return nil, err
 	}
 
-	// Save image as .tar archive
+	// Save Docker image as tar archive in output directory
 	tarFileName := strings.TrimSuffix(zipFileName, ".zip") + ".tar"
 	tarFilePath := filepath.Join("output", tarFileName)
 	if err := os.MkdirAll(filepath.Dir(tarFilePath), 0755); err != nil {
-		return nil, fmt.Errorf("failed to create output directory: %v", err)
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 	if err := zp.saveDockerImage(imageName, tarFilePath); err != nil {
-		return nil, fmt.Errorf("failed to save Docker image: %v", err)
+		return nil, err
 	}
 
-	// Resolve absolute paths for response
+	// Return absolute paths in response
 	absExtractDir, _ := filepath.Abs(extractDir)
 	absDockerfilePath, _ := filepath.Abs(dockerfilePath)
 	absTarFilePath, _ := filepath.Abs(tarFilePath)
@@ -92,12 +93,12 @@ func (zp *ZipProcessor) ProcessZip(zipData []byte, zipFileName string) (*models.
 	}, nil
 }
 
-// Extracts files from zip, optionally flattens single-folder zips
+// extractZip extracts files from the zip archive, flattening single-folder archives
 func (zp *ZipProcessor) extractZip(reader *zip.Reader, extractDir string) error {
 	var commonPrefix string
 	fileCount := 0
 
-	// Detect common prefix (e.g., folder/) for flattening
+	// Detect common prefix folder if all files share it
 	for _, file := range reader.File {
 		if file.FileInfo().IsDir() {
 			continue
@@ -109,16 +110,16 @@ func (zp *ZipProcessor) extractZip(reader *zip.Reader, extractDir string) error 
 				commonPrefix = parts[0] + "/"
 			}
 		} else if !strings.HasPrefix(file.Name, commonPrefix) {
-			commonPrefix = "" // Mixed structure, don't flatten
+			commonPrefix = "" // Mixed structure, no flattening
 			break
 		}
 	}
 
-	// Extract all files to disk
 	for _, file := range reader.File {
 		if file.FileInfo().IsDir() {
 			continue
 		}
+
 		targetPath := file.Name
 		if commonPrefix != "" {
 			targetPath = strings.TrimPrefix(file.Name, commonPrefix)
@@ -128,26 +129,31 @@ func (zp *ZipProcessor) extractZip(reader *zip.Reader, extractDir string) error 
 		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 			return err
 		}
+
 		rc, err := file.Open()
 		if err != nil {
 			return err
 		}
+
 		destFile, err := os.Create(filePath)
 		if err != nil {
 			rc.Close()
 			return err
 		}
+
 		_, err = io.Copy(destFile, rc)
 		destFile.Close()
 		rc.Close()
+
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// Finds and validates mcp.json; prioritizes root-most if duplicates found
+// findAndParseMCPConfigFromDir searches for the mcp.json file and parses it, preferring the shallowest one if multiple
 func (zp *ZipProcessor) findAndParseMCPConfigFromDir(extractDir string) (*models.MCPConfig, string, error) {
 	var mcpFilePath string
 
@@ -159,10 +165,10 @@ func (zp *ZipProcessor) findAndParseMCPConfigFromDir(extractDir string) (*models
 			if mcpFilePath == "" {
 				mcpFilePath = path
 			} else {
-				// Prefer file closer to root
-				rel1, _ := filepath.Rel(extractDir, mcpFilePath)
-				rel2, _ := filepath.Rel(extractDir, path)
-				if len(strings.Split(rel2, string(filepath.Separator))) < len(strings.Split(rel1, string(filepath.Separator))) {
+				// Prefer mcp.json closest to root (shallower path)
+				relOld, _ := filepath.Rel(extractDir, mcpFilePath)
+				relNew, _ := filepath.Rel(extractDir, path)
+				if len(strings.Split(relNew, string(filepath.Separator))) < len(strings.Split(relOld, string(filepath.Separator))) {
 					mcpFilePath = path
 				}
 			}
@@ -170,45 +176,47 @@ func (zp *ZipProcessor) findAndParseMCPConfigFromDir(extractDir string) (*models
 		return nil
 	})
 	if err != nil {
-		return nil, "", fmt.Errorf("error walking directory: %v", err)
+		return nil, "", fmt.Errorf("error walking extracted directory: %w", err)
 	}
+
 	if mcpFilePath == "" {
 		return nil, "", fmt.Errorf("mcp.json not found")
 	}
 
 	content, err := os.ReadFile(mcpFilePath)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read mcp.json: %v", err)
+		return nil, "", fmt.Errorf("failed to read mcp.json: %w", err)
 	}
 
 	var mcpConfig models.MCPConfig
 	if err := json.Unmarshal(content, &mcpConfig); err != nil {
-		return nil, "", fmt.Errorf("failed to parse mcp.json: %v", err)
+		return nil, "", fmt.Errorf("failed to parse mcp.json: %w", err)
 	}
+
 	if mcpConfig.Name == "" || mcpConfig.Run.Command == "" {
-		return nil, "", fmt.Errorf("mcp.json missing required fields")
+		return nil, "", fmt.Errorf("mcp.json missing required fields 'name' or 'run.command'")
 	}
 
 	return &mcpConfig, filepath.Dir(mcpFilePath), nil
 }
 
-// Builds Docker image from directory with Dockerfile
+// buildDockerImage builds a Docker image from the given context directory with the specified image name
 func (zp *ZipProcessor) buildDockerImage(buildContext, imageName string) error {
 	cmd := exec.Command("docker", "build", "-t", imageName, ".")
 	cmd.Dir = buildContext
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("docker build failed: %v\nOutput: %s", err, string(output))
+		return fmt.Errorf("docker build failed: %w\nOutput: %s", err, output)
 	}
 	return nil
 }
 
-// Saves image to tarball
+// saveDockerImage saves the specified Docker image to a tarball
 func (zp *ZipProcessor) saveDockerImage(imageName, tarFilePath string) error {
 	cmd := exec.Command("docker", "save", "-o", tarFilePath, imageName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("docker save failed: %v\nOutput: %s", err, string(output))
+		return fmt.Errorf("docker save failed: %w\nOutput: %s", err, output)
 	}
 	return nil
 }

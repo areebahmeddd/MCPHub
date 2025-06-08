@@ -16,14 +16,14 @@ func NewDockerfileGenerator() *DockerfileGenerator {
 func (dg *DockerfileGenerator) Generate(config *models.MCPConfig) string {
 	var dockerfile strings.Builder
 
-	// Determine base image based on command
+	// Determine base image
 	baseImage := dg.getBaseImage(config.Run.Command)
 	dockerfile.WriteString(fmt.Sprintf("FROM %s\n\n", baseImage))
 
 	// Set working directory
 	dockerfile.WriteString("WORKDIR /app\n\n")
 
-	// Add metadata
+	// Metadata
 	dockerfile.WriteString(fmt.Sprintf("LABEL name=\"%s\"\n", config.Name))
 	dockerfile.WriteString(fmt.Sprintf("LABEL version=\"%s\"\n", config.Version))
 	dockerfile.WriteString(fmt.Sprintf("LABEL description=\"%s\"\n", config.Description))
@@ -32,23 +32,22 @@ func (dg *DockerfileGenerator) Generate(config *models.MCPConfig) string {
 	}
 	dockerfile.WriteString("\n")
 
-	// Copy application files
+	// Copy app files
 	dockerfile.WriteString("COPY . .\n\n")
 
-	// Install dependencies based on project type
+	// Dependency installation
 	dg.addInstallCommands(&dockerfile, config.Run.Command)
 
-	// Expose port if specified
+	// Expose port
 	if config.Run.Port > 0 {
 		dockerfile.WriteString(fmt.Sprintf("EXPOSE %d\n\n", config.Run.Port))
-	}
-	// Add health check if port is specified
-	if config.Run.Port > 0 {
+
+		// Optional healthcheck
 		dockerfile.WriteString("HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\\n")
 		dockerfile.WriteString(fmt.Sprintf("  CMD curl -f http://localhost:%d/health || exit 1\n\n", config.Run.Port))
 	}
 
-	// Set the command
+	// Set CMD
 	cmdArgs := append([]string{config.Run.Command}, config.Run.Args...)
 	dockerfile.WriteString(fmt.Sprintf("CMD %s\n", dg.formatCommand(cmdArgs)))
 
@@ -90,11 +89,10 @@ func (dg *DockerfileGenerator) formatCommand(cmdArgs []string) string {
 		return "[\"\"]"
 	}
 
-	// Format as JSON array for CMD instruction
 	var quotedArgs []string
 	for _, arg := range cmdArgs {
 		quotedArgs = append(quotedArgs, fmt.Sprintf("\"%s\"", arg))
 	}
-	
+
 	return fmt.Sprintf("[%s]", strings.Join(quotedArgs, ", "))
 }
