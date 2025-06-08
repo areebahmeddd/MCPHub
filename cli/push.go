@@ -19,7 +19,7 @@ var pushCmd = &cobra.Command{
 2. Finding and parsing mcp.json configuration
 3. Generating a Dockerfile
 4. Building a Docker image
-5. Saving the image as a tar file`,
+5. Saving the image as a tar file and uploading to S3`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPush,
 }
@@ -55,12 +55,23 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to process zip file: %v", err)
 	}
 
+	// Initialize S3 service
+	s3Service, err := services.NewS3Service()
+	if err != nil {
+		return fmt.Errorf("failed to initialize S3 service: %v", err)
+	}
+
+	// Upload to S3
+	if err := s3Service.PushMCP(result.Config.Author, result.Config.Name, result.TarFilePath); err != nil {
+		return fmt.Errorf("failed to upload to S3: %v", err)
+	}
+
 	// Display results
 	fmt.Println("✅ Success!")
 	fmt.Printf("📁 Extracted to: %s\n", result.ExtractedPath)
 	fmt.Printf("🐳 Dockerfile: %s\n", result.DockerfilePath)
 	fmt.Printf("🏷️  Image name: %s\n", result.ImageName)
-	fmt.Printf("📦 Docker image saved to: %s\n", result.TarFilePath)
+	fmt.Printf("📦 Docker image uploaded to S3: %s/%s.tar\n", result.Config.Author, result.Config.Name)
 	fmt.Printf("📋 MCP Server: %s v%s\n", result.Config.Name, result.Config.Version)
 
 	if result.Config.Description != "" {

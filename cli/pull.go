@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"mcphub/services"
 
 	"github.com/spf13/cobra"
 )
@@ -20,43 +21,42 @@ func dockerAvailable() bool {
 }
 
 var pullCmd = &cobra.Command{
-	Use:   "pull <image_name>",
-	Short: "Import a local Docker image from tar file",
-	Long:  "Load a Docker image from a tar file that was created with mcphub push",
+	Use:   "pull <author/image-name>",
+	Short: "Download and import a Docker image from S3",
+	Long:  "Download a Docker image from S3 and load it into Docker",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if !dockerAvailable() {
-			fmt.Println("❌ Docker is not running or not installed. Please start Docker and try again.")
-			return
+			return fmt.Errorf("❌ Docker is not running or not installed. Please start Docker and try again")
 		}
 
-		imageName := args[0]
-		var tarFile string
+		// Parse author/image-name format
+		parts := strings.Split(args[0], "/")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid format. Use: author/image-name")
+		}
+		author := parts[0]
+		imageName := parts[1]
 
-		if strings.HasSuffix(imageName, ".tar") {
-			tarFile = imageName
-		} else {
-			outputPath := filepath.Join("output", imageName+".tar")
-			currentPath := imageName + ".tar"
-
-			if _, err := os.Stat(outputPath); err == nil {
-				tarFile = outputPath
-			} else if _, err := os.Stat(currentPath); err == nil {
-				tarFile = currentPath
-			} else {
-				fmt.Printf("❌ Could not find tar file for image '%s'\n", imageName)
-				fmt.Printf("   Looked for: %s or %s\n", outputPath, currentPath)
-				return
-			}
+		// Initialize S3 service
+		s3Service, err := services.NewS3Service()
+		if err != nil {
+			return fmt.Errorf("failed to initialize S3 service: %v", err)
 		}
 
+		// Download from S3
+		if err := s3Service.PullMCP(author, imageName); err != nil {
+			return fmt.Errorf("failed to download from S3: %v", err)
+		}
+
+		// Load the Docker image
+		tarFile := filepath.Join("output", imageName+".tar")
 		fmt.Printf("🐳 Loading Docker image from %s...\n", tarFile)
 
 		loadCmd := exec.Command("docker", "load", "-i", tarFile)
 		loadOut, err := loadCmd.CombinedOutput()
 		if err != nil {
-			fmt.Printf("❌ Failed to load image: %s\n", string(loadOut))
-			return
+			return fmt.Errorf("failed to load image: %s", string(loadOut))
 		}
 
 		output := strings.TrimSpace(string(loadOut))
@@ -74,5 +74,7 @@ var pullCmd = &cobra.Command{
 				fmt.Printf("💡 You can now run: mcphub run %s\n", strings.Split(loadedImage, ":")[0])
 			}
 		}
+
+		return nil
 	},
 }
