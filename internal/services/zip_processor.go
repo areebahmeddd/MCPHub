@@ -47,7 +47,7 @@ func (zp *ZipProcessor) ProcessZip(zipData []byte) (*models.DockerfileResponse, 
 func (zp *ZipProcessor) findAndParseMCPConfig(reader *zip.Reader) (*models.MCPConfig, error) {
 	var mcpFile *zip.File
 
-	// Look for mcp.json in the root directory
+	// First, look for mcp.json in the root directory
 	for _, file := range reader.File {
 		if strings.HasSuffix(file.Name, "mcp.json") && !strings.Contains(file.Name, "/") {
 			mcpFile = file
@@ -55,8 +55,20 @@ func (zp *ZipProcessor) findAndParseMCPConfig(reader *zip.Reader) (*models.MCPCo
 		}
 	}
 
+	// If not found in root, look for mcp.json in any subdirectory
 	if mcpFile == nil {
-		return nil, fmt.Errorf("mcp.json not found in the root of the zip file")
+		for _, file := range reader.File {
+			if strings.HasSuffix(file.Name, "mcp.json") {
+				// Count the number of directory separators to find the shallowest one
+				if mcpFile == nil || strings.Count(file.Name, "/") < strings.Count(mcpFile.Name, "/") {
+					mcpFile = file
+				}
+			}
+		}
+	}
+
+	if mcpFile == nil {
+		return nil, fmt.Errorf("mcp.json not found in the zip file")
 	}
 
 	// Open and read the mcp.json file
