@@ -73,14 +73,14 @@ func (s *S3Service) PullMCP(author, imageName string) error {
 	}
 	defer result.Body.Close()
 
-	// Create output directory if it doesn't exist
-	outputDir := "output"
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
+	// Create downloaded directory if it doesn't exist
+	downloadedDir := "downloaded"
+	if err := os.MkdirAll(downloadedDir, 0755); err != nil {
+		return fmt.Errorf("error creating downloaded directory: %v", err)
 	}
 
 	// Create the output file
-	outputPath := filepath.Join(outputDir, fmt.Sprintf("%s.tar", imageName))
+	outputPath := filepath.Join(downloadedDir, fmt.Sprintf("%s.tar", imageName))
 	file, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)

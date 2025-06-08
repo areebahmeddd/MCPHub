@@ -67,12 +67,16 @@ func (zp *ZipProcessor) ProcessZip(zipData []byte, zipFileName string) (*models.
 		return nil, err
 	}
 
-	// Save Docker image as tar archive in output directory
-	tarFileName := strings.TrimSuffix(zipFileName, ".zip") + ".tar"
-	tarFilePath := filepath.Join("output", tarFileName)
-	if err := os.MkdirAll(filepath.Dir(tarFilePath), 0755); err != nil {
-		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	// Create temp directory for tar file
+	tempDir, err := os.MkdirTemp("", "mcphub-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
+	defer os.RemoveAll(tempDir) // Clean up temp directory when done
+
+	// Save Docker image as tar archive in temp directory
+	tarFileName := strings.TrimSuffix(zipFileName, ".zip") + ".tar"
+	tarFilePath := filepath.Join(tempDir, tarFileName)
 	if err := zp.saveDockerImage(imageName, tarFilePath); err != nil {
 		return nil, err
 	}

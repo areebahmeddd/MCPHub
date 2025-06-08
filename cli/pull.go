@@ -50,7 +50,7 @@ var pullCmd = &cobra.Command{
 		}
 
 		// Load the Docker image
-		tarFile := filepath.Join("output", imageName+".tar")
+		tarFile := filepath.Join("downloaded", imageName+".tar")
 		fmt.Printf("🐳 Loading Docker image from %s...\n", tarFile)
 
 		loadCmd := exec.Command("docker", "load", "-i", tarFile)
