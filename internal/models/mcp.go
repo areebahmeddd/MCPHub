@@ -27,8 +27,11 @@ type DockerfileRequest struct {
 }
 
 type DockerfileResponse struct {
-	Dockerfile string    `json:"dockerfile"`
-	Config     MCPConfig `json:"config"`
-	Success    bool      `json:"success"`
-	Message    string    `json:"message,omitempty"`
+	ExtractedPath string    `json:"extracted_path"`
+	DockerfilePath string   `json:"dockerfile_path"`
+	ImageName     string    `json:"image_name"`
+	TarFilePath   string    `json:"tar_file_path"`
+	Config        MCPConfig `json:"config"`
+	Success       bool      `json:"success"`
+	Message       string    `json:"message,omitempty"`
 }

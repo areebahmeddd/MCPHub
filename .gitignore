@@ -21,6 +21,9 @@ go.work
 /dist/
 /build/
 /bin/
+/generated/
+/extracted/
+/output/
 
 # IDE and editor files
 .vscode/

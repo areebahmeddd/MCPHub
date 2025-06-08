@@ -39,10 +39,9 @@ func GenerateDockerfile(c *gin.Context) {
 		})
 		return
 	}
-
 	// Process the zip file
 	processor := services.NewZipProcessor()
-	result, err := processor.ProcessZip(fileContent)
+	result, err := processor.ProcessZip(fileContent, header.Filename)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.DockerfileResponse{
 			Success: false,
