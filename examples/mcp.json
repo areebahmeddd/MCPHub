@@ -1,0 +1,17 @@
+{
+  "name": "github-mapper",
+  "version": "1.0.0",
+  "description": "A server that maps GitHub repositories and provides metadata insights.",
+  "author": "Shivansh Karan",
+  "license": "ISC",
+  "keywords": ["github", "mapper", "mcp", "server"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shivanshkaran/github-mapper"
+  },
+  "run": {
+    "command": "node",
+    "args": ["build/index.js"],
+    "port": 5050
+  }
+}
