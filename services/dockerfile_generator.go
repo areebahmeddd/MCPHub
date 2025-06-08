@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"mcphub/internal/models"
+	"mcphub/models"
 )
 
 type DockerfileGenerator struct{}

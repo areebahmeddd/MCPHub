@@ -1,11 +1,12 @@
-package handlers
+package api
 
 import (
 	"net/http"
 
+	"mcphub/models"
+	"mcphub/services"
+
 	"github.com/gin-gonic/gin"
-	"mcphub/internal/models"
-	"mcphub/internal/services"
 )
 
 func GenerateDockerfile(c *gin.Context) {
@@ -39,6 +40,7 @@ func GenerateDockerfile(c *gin.Context) {
 		})
 		return
 	}
+	
 	// Process the zip file
 	processor := services.NewZipProcessor()
 	result, err := processor.ProcessZip(fileContent, header.Filename)

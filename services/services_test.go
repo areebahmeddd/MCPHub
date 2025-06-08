@@ -3,16 +3,10 @@ package services
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"mcphub/internal/models"
-)
+	"mcphub/models"
 
-func TestZipProcessor_ProcessZip(t *testing.T) {
-	// Note: This test would require Docker to be installed and running
-	// For CI/CD environments, you might want to mock the Docker commands
-	// or skip the test if Docker is not available
-	t.Skip("Skipping Docker integration test - requires Docker daemon")
-}
+	"github.com/stretchr/testify/assert"
+)
 
 func TestDockerfileGenerator_Generate(t *testing.T) {
 	generator := NewDockerfileGenerator()
@@ -52,4 +46,11 @@ func TestDockerfileGenerator_Generate(t *testing.T) {
 	assert.Contains(t, dockerfile2, "EXPOSE 5000")
 	assert.Contains(t, dockerfile2, "CMD [\"python3\", \"app.py\"]")
 	assert.Contains(t, dockerfile2, "requirements.txt")
+}
+
+func TestZipProcessor_ProcessZip(t *testing.T) {
+	// Note: This test would require Docker to be installed and running
+	// For CI/CD environments, you might want to mock the Docker commands
+	// or skip the test if Docker is not available
+	t.Skip("Skipping Docker integration test - requires Docker daemon")
 }

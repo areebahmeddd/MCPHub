@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"mcphub/internal/handlers"
 )
 
 func SetupRouter() *gin.Engine {
@@ -35,7 +34,7 @@ func SetupRouter() *gin.Engine {
 	// API routes
 	api := router.Group("/api/v1")
 	{
-		api.POST("/generate-dockerfile", handlers.GenerateDockerfile)
+		api.POST("/generate-dockerfile", GenerateDockerfile)
 	}
 
 	return router

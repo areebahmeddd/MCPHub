@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"mcphub/internal/api"
-	"mcphub/internal/config"
+	"mcphub/api"
+	"mcphub/config"
 )
 
 func main() {

@@ -1,20 +1,29 @@
-# Binaries
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# Test binary, built with `go test -c`
 *.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
 go.work
 
-# Editor configs
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# System files
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -23,19 +32,21 @@ go.work
 ehthumbs.db
 Thumbs.db
 
-# Outputs
+# Project specific directories
 extracted/
 output/
 uploads/
 *.tar
 *.zip
+
+# Log files
 *.log
 
-# Env files
+# Environment files
 .env
 .env.local
 .env.*.local
 
-# Temp dirs
+# Temporary files
 tmp/
 temp/
